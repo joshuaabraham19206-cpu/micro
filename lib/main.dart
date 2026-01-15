@@ -41,23 +41,23 @@ class MentalHealthApp extends StatelessWidget {
         // We use the google_fonts package to get beautiful, custom fonts.
         textTheme: GoogleFonts.nunitoTextTheme(Theme.of(context).textTheme)
             .copyWith(
-              // For headlines
-              headlineSmall: GoogleFonts.nunito(
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF333333),
-              ),
-              // For body text
-              bodyMedium: GoogleFonts.inter(
-                fontSize: 16,
-                color: const Color(0xFF555555),
-                height: 1.5, // Generous line spacing for readability
-              ),
-              // For buttons
-              labelLarge: GoogleFonts.nunito(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
+          // For headlines
+          headlineSmall: GoogleFonts.nunito(
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF333333),
+          ),
+          // For body text
+          bodyMedium: GoogleFonts.inter(
+            fontSize: 16,
+            color: const Color(0xFF555555),
+            height: 1.5, // Generous line spacing for readability
+          ),
+          // For buttons
+          labelLarge: GoogleFonts.nunito(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
 
         // --- WIDGET THEMES ---
         // Consistent styling for common widgets.
@@ -73,7 +73,8 @@ class MentalHealthApp extends StatelessWidget {
         ),
         cardTheme: CardThemeData(
           elevation: 2,
-          shadowColor: Colors.black.withOpacity(0.1),
+          // Replaced withOpacity to avoid warnings
+          shadowColor: const Color.fromRGBO(0, 0, 0, 0.1),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
