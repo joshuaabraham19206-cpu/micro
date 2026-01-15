@@ -1,5 +1,6 @@
-import 'dart:async'; // Required for the Timer
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class MeditationScreen extends StatefulWidget {
   const MeditationScreen({super.key});
@@ -9,41 +10,56 @@ class MeditationScreen extends StatefulWidget {
 }
 
 class _MeditationScreenState extends State<MeditationScreen> {
-  static const int _initialDuration = 300; // 5 minutes in seconds
+  static const int _initialDuration = 300;
   int _secondsRemaining = _initialDuration;
   bool _isRunning = false;
   Timer? _timer;
 
-  // Formats seconds into a MM:SS string
+  late YoutubePlayerController _youtubeController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _youtubeController = YoutubePlayerController(
+      initialVideoId: 'nkqnuxKj8Dk',
+      flags: const YoutubePlayerFlags(
+        autoPlay: false,
+        mute: false,
+        hideControls: true,
+        disableDragSeek: true,
+        loop: true,
+      ),
+    );
+  }
+
   String get _timerDisplay {
-    final int minutes = _secondsRemaining ~/ 60;
-    final int seconds = _secondsRemaining % 60;
+    final minutes = _secondsRemaining ~/ 60;
+    final seconds = _secondsRemaining % 60;
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   void _startPauseTimer() {
     if (_isRunning) {
-      // Pause logic
       _timer?.cancel();
-      setState(() {
-        _isRunning = false;
-      });
+      _youtubeController.pause();
+      setState(() => _isRunning = false);
     } else {
-      // Start logic
-      if (_secondsRemaining == 0) return; // Don't start if finished
+      if (_secondsRemaining == 0) return;
+
+      _youtubeController.play();
 
       _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (_secondsRemaining > 0) {
-          setState(() {
-            _secondsRemaining--;
-          });
+          setState(() => _secondsRemaining--);
         } else {
-          // Timer finished
-          _timer?.cancel();
-          setState(() {
-            _isRunning = false;
-          });
-          // Optional: Add a sound or "Done!" message
+          timer.cancel();
+          _youtubeController.pause();
+          _youtubeController.seekTo(Duration.zero);
+
+          setState(() => _isRunning = false);
+
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('Meditation complete! Well done.'),
@@ -52,14 +68,16 @@ class _MeditationScreenState extends State<MeditationScreen> {
           );
         }
       });
-      setState(() {
-        _isRunning = true;
-      });
+
+      setState(() => _isRunning = true);
     }
   }
 
   void _resetTimer() {
     _timer?.cancel();
+    _youtubeController.pause();
+    _youtubeController.seekTo(Duration.zero);
+
     setState(() {
       _secondsRemaining = _initialDuration;
       _isRunning = false;
@@ -68,7 +86,8 @@ class _MeditationScreenState extends State<MeditationScreen> {
 
   @override
   void dispose() {
-    _timer?.cancel(); // Ensure the timer is cancelled when the screen is left
+    _timer?.cancel();
+    _youtubeController.dispose();
     super.dispose();
   }
 
@@ -80,73 +99,71 @@ class _MeditationScreenState extends State<MeditationScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // --- Calming Visual ---
-            Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.orange.shade300.withOpacity(0.2),
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.self_improvement,
-                  size: 100,
-                  color: Colors.orange.shade400,
-                ),
+      body: Column(
+        children: [
+          /// Hidden YouTube Player (audio only)
+          SizedBox(
+            height: 0,
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: YoutubePlayer(
+                controller: _youtubeController,
               ),
             ),
-            const SizedBox(height: 40),
-            // --- Timer Display ---
-            Text(
-              _timerDisplay,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontSize: 72, fontWeight: FontWeight.w300),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              '5-Minute Calm',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 18,
-                    color: Colors.grey[600],
+          ),
+
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      // ✅ FIXED: no withOpacity warning
+                      color: Colors.orange.shade300.withAlpha(51),
+                    ),
+                    child: Icon(
+                      Icons.self_improvement,
+                      size: 100,
+                      color: Colors.orange.shade400,
+                    ),
                   ),
-            ),
-            const SizedBox(height: 40),
-            // --- Control Buttons ---
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // --- Reset Button ---
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  iconSize: 30,
-                  color: Colors.grey[700],
-                  onPressed: _resetTimer,
-                ),
-                const SizedBox(width: 20),
-                // --- Start/Pause Button ---
-                FloatingActionButton.large(
-                  onPressed: _startPauseTimer,
-                  backgroundColor: Colors.orange.shade400,
-                  child: Icon(
-                    _isRunning ? Icons.pause : Icons.play_arrow,
-                    size: 40,
-                    color: Colors.white,
+                  const SizedBox(height: 40),
+                  Text(
+                    _timerDisplay,
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineSmall
+                        ?.copyWith(fontSize: 72, fontWeight: FontWeight.w300),
                   ),
-                ),
-                const SizedBox(width: 20),
-                // Placeholder to balance the row
-                const SizedBox(width: 30),
-              ],
-            )
-          ],
-        ),
+                  const SizedBox(height: 40),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        iconSize: 30,
+                        onPressed: _resetTimer,
+                      ),
+                      const SizedBox(width: 20),
+                      FloatingActionButton.large(
+                        onPressed: _startPauseTimer,
+                        backgroundColor: Colors.orange.shade400,
+                        child: Icon(
+                          _isRunning ? Icons.pause : Icons.play_arrow,
+                          size: 40,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
