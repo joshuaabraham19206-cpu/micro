@@ -12,7 +12,7 @@ class ResourcesScreen extends StatelessWidget {
     {
       'icon': Icons.videocam,
       'title': 'Managing Exam Stress',
-      'type': 'Video • 12 min',
+      'type': 'Video • 2.5 min',
       'content': 'This is a placeholder for the exam stress video.',
     },
     {
@@ -24,7 +24,7 @@ class ResourcesScreen extends StatelessWidget {
     {
       'icon': Icons.article,
       'title': 'Understanding Anxiety',
-      'type': 'Article • 8 min read',
+      'type': 'Article',
       'content':
           'Anxiety is a feeling of worry, nervousness, or unease, typically about an imminent event or something with an uncertain outcome...\n\n(This is placeholder text. In a real app, this article would be much longer and would be loaded from a database or API.)\n\nCommon symptoms include:\n• Feeling nervous, restless or tense\n• Having a sense of impending danger, panic or doom\n• Having an increased heart rate\n• Breathing rapidly (hyperventilation)\n\nIt is important to remember that you are not alone and help is available. Talk to someone you trust or seek professional help.',
     },
@@ -37,7 +37,7 @@ class ResourcesScreen extends StatelessWidget {
     {
       'icon': Icons.self_improvement,
       'title': 'Building Resilience',
-      'type': 'Video • 15 min',
+      'type': 'Video • 4 min',
       'content': 'This is a placeholder for the resilience video.',
     },
   ];
@@ -93,3 +93,4 @@ class ResourcesScreen extends StatelessWidget {
     );
   }
 }
+
