@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class BreathingScreen extends StatefulWidget {
   const BreathingScreen({super.key});
@@ -7,55 +9,54 @@ class BreathingScreen extends StatefulWidget {
   State<BreathingScreen> createState() => _BreathingScreenState();
 }
 
-// We use SingleTickerProviderStateMixin to power the AnimationController
 class _BreathingScreenState extends State<BreathingScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  late YoutubePlayerController _youtubeController;
 
-  String _instruction = "Get Ready..."; // Text to guide the user
+  static const Duration sessionDuration = Duration(minutes: 2);
+  Timer? _sessionTimer;
+
+  bool _isRunning = false;
+  String _instruction = "Ready";
 
   @override
   void initState() {
     super.initState();
 
+    /// Breathing animation controller
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 12), // Full cycle: 4s in, 4s hold, 4s out
+      duration: const Duration(seconds: 12), // 4s in, 4s hold, 4s out
     );
 
-    // We use a TweenSequence to create a more complex animation:
-    // 1. Grow (Breathe In)
-    // 2. Stay large (Hold)
-    // 3. Shrink (Breathe Out)
     _animation = TweenSequence<double>([
-      // Breathe In (0% to 33% of animation)
       TweenSequenceItem(
-          tween: Tween<double>(begin: 50.0, end: 150.0)
-              .chain(CurveTween(curve: Curves.easeIn)),
-          weight: 33.3),
-      // Hold (33% to 66% of animation)
-      TweenSequenceItem(tween: ConstantTween<double>(150.0), weight: 33.3),
-      // Breathe Out (66% to 100% of animation)
+        tween: Tween(begin: 50.0, end: 150.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 33.3,
+      ),
       TweenSequenceItem(
-          tween: Tween<double>(begin: 150.0, end: 50.0)
-              .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 33.3),
+        tween: ConstantTween(150.0),
+        weight: 33.3,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 150.0, end: 50.0)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 33.3,
+      ),
     ]).animate(_controller);
 
-    _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _controller.repeat(); // Loop the animation
-      }
-    });
-
-    // Listen to the animation value to update the instruction text
+    /// Instruction updates
     _controller.addListener(() {
-      final double value = _controller.value;
+      final v = _controller.value;
+      if (!mounted) return;
+
       setState(() {
-        if (value < 0.33) {
+        if (v < 0.33) {
           _instruction = "Breathe In";
-        } else if (value < 0.66) {
+        } else if (v < 0.66) {
           _instruction = "Hold";
         } else {
           _instruction = "Breathe Out";
@@ -63,13 +64,60 @@ class _BreathingScreenState extends State<BreathingScreen>
       });
     });
 
-    // Start the animation
-    _controller.forward();
+    /// Loop animation
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed && _isRunning) {
+        _controller.repeat();
+      }
+    });
+
+    /// YouTube audio controller
+    _youtubeController = YoutubePlayerController(
+      initialVideoId: 'aIIEI33EUqI',
+      flags: const YoutubePlayerFlags(
+        autoPlay: false,
+        hideControls: true,
+        disableDragSeek: true,
+        loop: true,
+      ),
+    );
+  }
+
+  void _startSession() {
+    if (_isRunning) return;
+
+    setState(() {
+      _isRunning = true;
+      _instruction = "Breathe In";
+    });
+
+    _controller.forward(from: 0);
+    _youtubeController.play();
+
+    _sessionTimer = Timer(sessionDuration, _stopSession);
+  }
+
+  void _stopSession() {
+    _sessionTimer?.cancel();
+    _controller.stop();
+    _controller.reset();
+
+    _youtubeController.pause();
+    _youtubeController.seekTo(Duration.zero);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isRunning = false;
+      _instruction = "Session Complete 🌿";
+    });
   }
 
   @override
   void dispose() {
-    _controller.dispose(); // Always dispose of controllers
+    _sessionTimer?.cancel();
+    _controller.dispose();
+    _youtubeController.dispose();
     super.dispose();
   }
 
@@ -77,39 +125,59 @@ class _BreathingScreenState extends State<BreathingScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Breathing Exercise",
-            style: Theme.of(context).textTheme.headlineSmall),
+        title: Text(
+          "Breathing Exercise",
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // AnimatedBuilder is the most efficient way to build an animation
-            AnimatedBuilder(
-              animation: _animation,
-              builder: (context, child) {
-                return Container(
-                  width: _animation.value * 2,
-                  height: _animation.value * 2,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Theme.of(context).primaryColor.withOpacity(0.7),
+      body: Column(
+        children: [
+          /// Hidden YouTube player (audio only)
+          SizedBox(
+            height: 0,
+            child: YoutubePlayer(controller: _youtubeController),
+          ),
+
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AnimatedBuilder(
+                    animation: _animation,
+                    builder: (_, __) {
+                      return Container(
+                        width: _animation.value * 2,
+                        height: _animation.value * 2,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Theme.of(context)
+                              .primaryColor
+                              .withAlpha(180), // avoids withOpacity warning
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
+                  const SizedBox(height: 50),
+                  Text(
+                    _instruction,
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineSmall
+                        ?.copyWith(fontSize: 28),
+                  ),
+                  const SizedBox(height: 40),
+                  ElevatedButton(
+                    onPressed: _isRunning ? null : _startSession,
+                    child: const Text("Start 2-Minute Session"),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 60),
-            Text(
-              _instruction,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontSize: 28),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
