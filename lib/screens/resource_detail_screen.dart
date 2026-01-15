@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 // This is the new screen that shows the content for a specific resource.
-class ResourceDetailScreen extends StatelessWidget {
+class ResourceDetailScreen extends StatefulWidget {
   final String title;
   final String type;
   final String content;
@@ -14,20 +17,72 @@ class ResourceDetailScreen extends StatelessWidget {
   });
 
   @override
+  State<ResourceDetailScreen> createState() => _ResourceDetailScreenState();
+}
+
+class _ResourceDetailScreenState extends State<ResourceDetailScreen> {
+  YoutubePlayerController? _youtubeController;
+  String _videoId = '';
+
+  @override
+  void initState() {
+    super.initState();
+
+    // --- VIDEO RESOURCES ---
+    if (widget.type.contains('Video')) {
+      if (widget.title == 'Managing Exam Stress') {
+        _videoId = '-RZ86OB9hw4';
+      } else if (widget.title == 'Building Resilience') {
+        _videoId = 'GLAdRgft7pU';
+      }
+    }
+
+    // --- AUDIO / EXERCISE RESOURCES ---
+    else if (widget.type.contains('Audio') ||
+        widget.type.contains('Exercise')) {
+      if (widget.title == 'Guided Morning Meditation') {
+        _videoId = 'FGO8IWiusJo';
+      } else if (widget.title == '5-Minute Mindful Breathing') {
+        _videoId = 'DbDoBzGY3vo';
+      }
+    }
+
+    // Initialize YouTube controller ONLY for mobile platforms
+    if (_videoId.isNotEmpty && !kIsWeb) {
+      _youtubeController = YoutubePlayerController(
+        initialVideoId: _videoId,
+        flags: const YoutubePlayerFlags(
+          autoPlay: false,
+          mute: false,
+          hideControls: false,
+          showLiveFullscreenButton: true,
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _youtubeController?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(title, style: Theme.of(context).textTheme.headlineSmall),
+        title: Text(
+          widget.title,
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      // We use a ListView to ensure the content can scroll if it's long
       body: ListView(
         padding: const EdgeInsets.all(20.0),
         children: [
-          // --- Custom Header ---
           Text(
-            type.toUpperCase(),
+            widget.type.toUpperCase(),
             style: TextStyle(
               color: Theme.of(context).primaryColor,
               fontWeight: FontWeight.bold,
@@ -36,67 +91,80 @@ class ResourceDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontSize: 26),
+            widget.title,
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(fontSize: 26),
           ),
           const Divider(height: 30),
-
-          // --- Smart Content Widget ---
-          // This widget build the UI based on the resource type
           _buildContent(context),
         ],
       ),
     );
   }
 
-  // This helper method checks the 'type' and builds the correct UI
+  // Helper method to build content based on type
   Widget _buildContent(BuildContext context) {
-    // --- VIDEO PLAYER UI ---
-    if (type.contains('Video')) {
+    // --- VIDEO UI ---
+    if (widget.type.contains('Video')) {
+      if (_videoId.isEmpty) {
+        return const Text("Video unavailable.");
+      }
+
+      // WEB → Open YouTube externally
+      if (kIsWeb) {
+        return ElevatedButton.icon(
+          onPressed: () async {
+            final uri =
+                Uri.parse('https://www.youtube.com/watch?v=$_videoId');
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          },
+          icon: const Icon(Icons.play_circle_fill),
+          label: const Text('Open Video on YouTube'),
+        );
+      }
+
+      // ANDROID / IOS → Embedded Player
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: YoutubePlayer(
+          controller: _youtubeController!,
+          showVideoProgressIndicator: true,
+        ),
+      );
+    }
+
+    // --- ARTICLE UI ---
+    else if (widget.type.contains('Article')) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Here is the video you requested. Tap to play.",
+            widget.content,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
-          const SizedBox(height: 20),
-          // --- This is our "Fake Video Player" ---
-          Container(
-            height: 220,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.circular(16.0),
-              image: const DecorationImage(
-                image: NetworkImage(
-                  'https://placehold.co/600x400/76b8b8/white?text=Exam+Stress+Video',
-                ),
-                fit: BoxFit.cover,
-                opacity: 0.6,
-              ),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.play_circle_fill,
-                color: Colors.white.withOpacity(0.9),
-                size: 70,
-              ),
-            ),
+          const SizedBox(height: 30),
+          ElevatedButton.icon(
+            onPressed: () async {
+              final uri = Uri.parse(
+                'https://www.psychologytoday.com/us/basics/anxiety',
+              );
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            },
+            icon: const Icon(Icons.open_in_new),
+            label: const Text('Read Full Article'),
           ),
         ],
       );
     }
-    // --- ARTICLE UI ---
-    else if (type.contains('Article')) {
-      return Text(
-        content, // Display the long placeholder text
-        style: Theme.of(context).textTheme.bodyMedium,
-      );
-    }
-    // --- AUDIO/EXERCISE UI ---
+
+    // --- AUDIO / EXERCISE UI ---
     else {
+      if (_videoId.isEmpty) {
+        return const Text("Audio unavailable.");
+      }
+
       return Column(
         children: [
           Text(
@@ -105,11 +173,24 @@ class ResourceDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 30),
           ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: () async {
+              // WEB → Open YouTube externally
+              if (kIsWeb) {
+                final uri =
+                    Uri.parse('https://www.youtube.com/watch?v=$_videoId');
+                await launchUrl(uri,
+                    mode: LaunchMode.externalApplication);
+              }
+              // ANDROID / IOS → Play audio
+              else {
+                _youtubeController?.play();
+              }
+            },
             icon: const Icon(Icons.play_arrow),
             label: const Text('Play Audio'),
             style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
             ),
           ),
         ],
@@ -117,3 +198,7 @@ class ResourceDetailScreen extends StatelessWidget {
     }
   }
 }
+
+
+
+
