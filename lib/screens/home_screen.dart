@@ -14,10 +14,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // SafeArea ensures that the app's content is not obscured by system UI
-    // like the notch on an iPhone or the status bar.
     return SafeArea(
-      // We use a ListView to allow content to scroll if it overflows the screen.
       child: ListView(
         padding: const EdgeInsets.all(20.0),
         children: [
@@ -36,7 +33,7 @@ class HomeScreen extends StatelessWidget {
 
           // Main Call-to-Action Card for the AI Chatbot
           Card(
-            color: Theme.of(context).primaryColor.withOpacity(0.9),
+            color: Theme.of(context).primaryColor.withAlpha((0.9 * 255).toInt()), // 90% opacity
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
@@ -55,7 +52,7 @@ class HomeScreen extends StatelessWidget {
                     'Talk to our interactive chatbot for instant coping support. It\'s safe and available 24/7.',
                     style: GoogleFonts.inter(
                       fontSize: 16,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withAlpha((0.9 * 255).toInt()), // 90% opacity
                       height: 1.5,
                     ),
                   ),
@@ -77,6 +74,7 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 30),
+
           // Section for quick actions
           Text(
             'Quick Tools',
@@ -88,11 +86,10 @@ class HomeScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // --- ADDED BREATHING CARD BACK ---
               _buildQuickToolCard(
                 context,
                 Icons.spa, // Breathing icon
-                'Breathing', // Breathing label
+                'Breathing',
                 Theme.of(context).colorScheme.secondary,
               ),
               _buildQuickToolCard(
@@ -114,9 +111,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // --- UPDATED HELPER WIDGET ---
-  // A helper widget to build the small tool cards.
-  // It's now wrapped in an InkWell to make the whole card tappable.
+  // --- HELPER WIDGET ---
   Widget _buildQuickToolCard(
     BuildContext context,
     IconData icon,
@@ -125,13 +120,10 @@ class HomeScreen extends StatelessWidget {
   ) {
     return Expanded(
       child: Card(
-        color: color.withOpacity(0.1),
+        color: color.withAlpha((0.1 * 255).toInt()), // 10% opacity
         elevation: 0,
-        // Wrap the contents in an InkWell to make it tappable
         child: InkWell(
           onTap: () {
-            // --- NAVIGATION LOGIC ---
-            // We check the label to decide which screen to open
             if (label == 'Breathing') {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const BreathingScreen()),
@@ -146,7 +138,7 @@ class HomeScreen extends StatelessWidget {
               );
             }
           },
-          borderRadius: BorderRadius.circular(16), // Match Card's border radius
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -165,3 +157,4 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
+
